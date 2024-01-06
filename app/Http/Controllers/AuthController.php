@@ -42,7 +42,7 @@ class AuthController extends Controller
 
             $validator_messages = [
                 'name.required' => 'Name is required',
-                'email.required' => 'Email is required',
+                'email.required' => 'Email iaps required',
                 'email.email' => 'Invalid email format',
                 'email.unique' => 'Email is already taken',
                 'mobile_no.required' => 'Mobile number is required',
@@ -70,8 +70,9 @@ class AuthController extends Controller
 
             $temporary_user = TemporaryUser::create([
                 'name' => $request_all['name'],
-                'emai' => $request_all['email'],
+                'email' => $request_all['email'],
                 'mobile_no' => $request_all['mobile_no'],
+                'dob' => $request_all['dob'],
                 'password' => encrypt($request_all['password']),
             ]);
 
@@ -190,6 +191,7 @@ class AuthController extends Controller
                     'name' => $temp_user->name,
                     'email' => $temp_user->email,
                     'mobile_no' => $temp_user->mobile_no,
+                    'dob' => $temp_user->dob,
                     'password' => Hash::make($password),
                 ]);
                 $verified_otp->update([

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PremiumAddController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,7 +28,8 @@ Route::get('logout', [AuthController::class, 'logout']);
 Route::group(['middleware' => ['auth.jwt']], function () {
     Route::post('changePassword', [AuthController::class, 'changePassword']);
     Route::get('user', [AuthController::class, 'user']);
-
-
+    Route::get('premiumAddList', [PremiumAddController::class, 'premiumAddList']);
 });
+
+Route::get('logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);
 

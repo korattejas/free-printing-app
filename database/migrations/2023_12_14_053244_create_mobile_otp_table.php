@@ -15,10 +15,11 @@ return new class extends Migration {
             $table->unsignedBigInteger('user_id');
 //            $table->foreign('user_id')->references('id')->on('users');
             $table->enum('user_type', [0, 1])->default(0)->comment('0 = temp user, 1 = verified user');
-            $table->string('mobile_no', 15)->unique();
+            $table->bigInteger('mobile_no')->unique();
             $table->unsignedInteger('otp')->unique();
             $table->timestamp('mobile_otp_verified_at')->nullable();
             $table->timestamp('mobile_otp_expire_at')->nullable();
+            $table->tinyInteger('status')->default(1);
             $table->timestamps();
         });
     }

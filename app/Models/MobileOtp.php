@@ -18,6 +18,7 @@ class MobileOtp extends Model
         'otp',
         'mobile_otp_expire_at',
         'mobile_otp_verified_at',
+        'status',
     ];
 
     public function user()
