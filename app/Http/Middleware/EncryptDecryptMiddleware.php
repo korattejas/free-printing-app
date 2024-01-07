@@ -21,6 +21,8 @@ class EncryptDecryptMiddleware
         // Decrypt and decode incoming data
         $requestData = $request->all();
         $decryptedData = $this->decodeAndDecrypt($requestData['response']);
+//        dd($decryptedData);
+
 
         // Update the request with decrypted data
         $request->replace((array)$decryptedData);
@@ -50,7 +52,7 @@ class EncryptDecryptMiddleware
         $encryptionKey = config('constants.encryption_key');
 //        dd($data,$encryptionKey);
         $decryptedData = decrypt(base64_decode($data), $encryptionKey);
-//        dd($decryptedData);
+        dd($decryptedData);
         return base64_encode($decryptedData);
 //        return is_array($decryptedData) ? $decryptedData : [];
 //        return json_decode($decryptedData, true);

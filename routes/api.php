@@ -30,6 +30,5 @@ Route::group(['middleware' => ['auth.jwt']], function () {
     Route::get('user', [AuthController::class, 'user']);
     Route::get('premiumAddList', [PremiumAddController::class, 'premiumAddList']);
 });
-
-Route::get('logs', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);
+Route::get('logs/admin/admin', [\Rap2hpoutre\LaravelLogViewer\LogViewerController::class, 'index']);
 
