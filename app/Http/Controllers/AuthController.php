@@ -42,7 +42,7 @@ class AuthController extends Controller
 
             $validator_messages = [
                 'name.required' => 'Name is required',
-                'email.required' => 'Email iaps required',
+                'email.required' => 'Email id is required',
                 'email.email' => 'Invalid email format',
                 'email.unique' => 'Email is already taken',
                 'mobile_no.required' => 'Mobile number is required',
