@@ -21,10 +21,12 @@ use App\Http\Controllers\PremiumAddController;
 //});
 
 Route::post('register', [AuthController::class, 'register']);
-Route::post('mobileOtpVerified', [AuthController::class, 'mobileOtpVerified']);
+Route::post('mobileOtpVerifiedRegister', [AuthController::class, 'mobileOtpVerifiedRegister']);
 Route::post('sendOtp', [AuthController::class, 'sendOtp']);
 Route::post('login', [AuthController::class, 'login']);
 Route::get('logout', [AuthController::class, 'logout']);
+Route::post('forgotPassword', [AuthController::class, 'forgotPassword']);
+Route::post('mobileOtpVerifiedForgotPassword', [AuthController::class, 'mobileOtpVerifiedForgotPassword']);
 Route::group(['middleware' => ['auth.jwt']], function () {
     Route::post('changePassword', [AuthController::class, 'changePassword']);
     Route::get('user', [AuthController::class, 'user']);
