@@ -28,11 +28,12 @@ class AuthController extends Controller
         $this->controller_name = "App\Http\Controllers\AuthController";
     }
 
-    public function register(Request $request): \Illuminate\Http\JsonResponse
+    public function registerOld(Request $request): \Illuminate\Http\JsonResponse
     {
         $function_name = "register";
         $request_all = $request->all();
         try {
+
             $validator_rules = [
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
@@ -95,7 +96,70 @@ class AuthController extends Controller
             return $this->sendResponse($this->success_status_code, "User register successfully", $success);
 
         } catch (\Exception $e) {
-            logger()->error("$this->controller_name:$function_name:Exception occurred", ['error_message' => $e->getMessage(), 'request' => $request_all]);
+            logError($this->controller_name, $function_name, $e);
+            return $this->sendError($this->backend_error_code, "$this->error_message");
+        }
+
+    }
+
+    public function register(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $function_name = "register";
+        $request_all = $request->all();
+        try {
+
+            $validator_rules = [
+                'mobile_no' => 'required|string|unique:users,mobile_no|size:10',
+                'password' => 'required|string|min:6|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
+            ];
+
+            $validator_messages = [
+                'mobile_no.required' => 'Mobile number is required',
+                'mobile_no.string' => 'Invalid mobile number format',
+                'mobile_no.unique' => 'Mobile number is already taken',
+                'mobile_no.max' => 'Mobile number should not exceed 10 characters',
+                'password.required' => 'Password is required',
+                'password.string' => 'Invalid password format',
+                'password.min' => 'Password should be at least 6 characters',
+                'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, and one numeric digit',
+            ];
+
+            $validator = Validator::make($request_all, $validator_rules, $validator_messages);
+            if ($validator->fails()) {
+                $firstErrorMessage = $validator->errors()->first();
+                logger()->error("$this->controller_name:$function_name: Validation failed - $firstErrorMessage", ['request' => $request_all]);
+                return $this->sendError($this->validator_error_code, "$firstErrorMessage");
+            }
+
+            $check_otp = MobileOtp::where('mobile_no', $request_all['mobile_no'])->whereNull('mobile_otp_verified_at')->first();
+            if ($check_otp) {
+                $check_otp->delete();
+                TemporaryUser::where('mobile_no', $request_all['mobile_no'])->delete();
+            }
+
+            $temporary_user = TemporaryUser::create([
+                'mobile_no' => $request_all['mobile_no'],
+                'password' => encrypt($request_all['password']),
+            ]);
+
+            $otp = rand(100000, 999999);
+
+            $mobileOtp = MobileOtp::create([
+                'user_id' => $temporary_user->id,
+                'mobile_no' => $temporary_user->mobile_no,
+                'otp' => $otp,
+                'mobile_otp_expire_at' => now()->addMinutes(2),
+                'mobile_otp_verified_at' => null,
+            ]);
+
+            $user['mobile_no'] = $temporary_user->mobile_no;
+
+            $success = ['user' => $user, 'mobile_otp' => $otp];
+
+            return $this->sendResponse($this->success_status_code, "User register successfully", $success);
+
+        } catch (\Exception $e) {
+            logError($this->controller_name, $function_name, $e);
             return $this->sendError($this->backend_error_code, "$this->error_message");
         }
 
@@ -137,7 +201,7 @@ class AuthController extends Controller
             return $this->sendResponse($this->success_status_code, 'OTP send successfully', $otp);
 
         } catch (\Exception $e) {
-            logger()->error("$this->controller_name:$function_name:Exception occurred", ['error_message' => $e->getMessage(), 'request' => $request_all]);
+            logError($this->controller_name, $function_name, $e);
             return $this->sendError($this->backend_error_code, "$this->error_message");
         }
 
@@ -217,7 +281,7 @@ class AuthController extends Controller
             return $this->sendError($this->backend_error_code, 'User registration failed');
 
         } catch (\Exception $e) {
-            logger()->error("$this->controller_name:$function_name:Exception occurred", ['error_message' => $e->getMessage(), 'request' => $request_all]);
+            logError($this->controller_name, $function_name, $e);
             return $this->sendError($this->backend_error_code, "$this->error_message");
         }
 
@@ -260,7 +324,7 @@ class AuthController extends Controller
             return $this->sendResponse($this->success_status_code, "User login successfully", $success);
 
         } catch (\Exception $e) {
-            logger()->error("$this->controller_name:$function_name:Exception occurred", ['error_message' => $e->getMessage(), 'request' => $request_all]);
+            logError($this->controller_name, $function_name, $e);
             return $this->sendError($this->backend_error_code, "$this->error_message");
         }
 
@@ -278,7 +342,7 @@ class AuthController extends Controller
             return $this->sendResponse($this->success_status_code, "User logout successfully", []);
 
         } catch (\Exception $e) {
-            logger()->error("$this->controller_name:$function_name:Exception occurred", ['error_message' => $e->getMessage()]);
+            logError($this->controller_name, $function_name, $e);
             return $this->sendError($this->backend_error_code, "$this->error_message");
         }
 
@@ -327,7 +391,7 @@ class AuthController extends Controller
             return $this->sendResponse($this->success_status_code, "Password changed successfully", $data = []);
 
         } catch (\Exception $e) {
-            logger()->error("$this->controller_name:$function_name:Exception occurred", ['error_message' => $e->getMessage(), 'request' => $request_all]);
+            logError($this->controller_name, $function_name, $e);
             return $this->sendError($this->backend_error_code, "$this->error_message");
         }
 
@@ -341,7 +405,7 @@ class AuthController extends Controller
             $user = auth('api')->user();
             dd($user);
         } catch (\Exception $e) {
-            logger()->error("$this->controller_name:$function_name:Exception occurred", ['error_message' => $e->getMessage(), 'request' => $request_all]);
+            logError($this->controller_name, $function_name, $e);
             return $this->sendError($this->backend_error_code, "$this->error_message");
         }
 
