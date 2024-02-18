@@ -172,6 +172,7 @@ class AuthController extends Controller
         try {
             $validator_rules = [
                 'mobile_no' => 'required|string|size:10|exists:mobile_otp,mobile_no',
+                'is_forgot' => 'required',
             ];
 
             $validator_messages = [
@@ -179,6 +180,7 @@ class AuthController extends Controller
                 'mobile_no.required' => 'Mobile number is required',
                 'mobile_no.string' => 'Invalid mobile number format',
                 'mobile_no.size' => 'Mobile number should be 10 characters',
+                'is_forgot.required' => 'Is forgot is required',
             ];
 
             $validator = Validator::make($request_all, $validator_rules, $validator_messages);
@@ -195,7 +197,7 @@ class AuthController extends Controller
             $verified_otp->update([
                 'otp' => $otp,
                 'mobile_otp_expire_at' => now()->addMinutes(2),
-                'mobile_otp_verified_at' => null,
+                'mobile_otp_verified_at' => $request_all['is_forgot'] == 1 ? now() : null,
             ]);
 
             return $this->sendResponse($this->success_status_code, 'OTP send successfully', $otp);
@@ -207,9 +209,9 @@ class AuthController extends Controller
 
     }
 
-    public function mobileOtpVerified(Request $request): \Illuminate\Http\JsonResponse
+    public function mobileOtpVerifiedRegister(Request $request): \Illuminate\Http\JsonResponse
     {
-        $function_name = "mobileOtpVerified";
+        $function_name = "mobileOtpVerifiedRegister";
         $request_all = $request->all();
         try {
             $validator_rules = [
@@ -390,6 +392,101 @@ class AuthController extends Controller
 
             return $this->sendResponse($this->success_status_code, "Password changed successfully", $data = []);
 
+        } catch (\Exception $e) {
+            logError($this->controller_name, $function_name, $e);
+            return $this->sendError($this->backend_error_code, "$this->error_message");
+        }
+
+    }
+
+    public function mobileOtpVerifiedForgotPassword(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $function_name = "mobileOtpVerifiedForgotPassword";
+        $request_all = $request->all();
+        try {
+            $validator_rules = [
+                'mobile_no' => 'required|string|size:10|exists:users,mobile_no',
+                'otp' => 'required|numeric|digits:6|exists:mobile_otp,otp',
+            ];
+
+            $validator_messages = [
+                'mobile_no.exists' => 'Invalid mobile number',
+                'mobile_no.required' => 'Mobile number is required',
+                'mobile_no.string' => 'Invalid mobile number format',
+                'mobile_no.size' => 'Mobile number should be 10 characters',
+                'otp.required' => 'OTP is required',
+                'otp.numeric' => 'OTP must be a number',
+                'otp.digits' => 'OTP must be 6 digits',
+                'otp.exists' => 'Invalid OTP',
+            ];
+
+            $validator = Validator::make($request_all, $validator_rules, $validator_messages);
+            if ($validator->fails()) {
+                $firstErrorMessage = $validator->errors()->first();
+                logger()->error("$this->controller_name:$function_name: Validation failed - $firstErrorMessage", ['request' => $request_all]);
+                return $this->sendError($this->validator_error_code, "$firstErrorMessage");
+            }
+
+            $verified_otp = MobileOtp::where('mobile_no', $request_all['mobile_no'])->first();
+
+            if ($verified_otp) {
+                if ($verified_otp->mobile_otp_expire_at <= now()) {
+                    return $this->sendError($this->backend_error_code, "OTP expired");
+                } elseif ($verified_otp->otp != $request_all['otp']) {
+                    return $this->sendError($this->backend_error_code, "Invalid OTP");
+                } elseif ($verified_otp->mobile_otp_verified_at) {
+                    return $this->sendError($this->backend_error_code, "Your mobile number is already verified");
+                }
+
+                $verified_otp->update(['mobile_otp_verified_at' => now()]);
+            }
+
+            return $this->sendResponse($this->success_status_code, "Forgot password OTP verified successfully", $data = []);
+
+        } catch (\Exception $e) {
+            logError($this->controller_name, $function_name, $e);
+            return $this->sendError($this->backend_error_code, "$this->error_message");
+        }
+
+    }
+
+    public function forgotPassword(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $function_name = "forgotPassword";
+        $request_all = $request->all();
+        try {
+            $validator_rules = [
+                'mobile_no' => 'required|string|size:10|exists:users,mobile_no',
+                'password' => 'required|string|min:6|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
+            ];
+
+            $validator_messages = [
+                'mobile_no.exists' => 'Invalid mobile number',
+                'mobile_no.required' => 'Mobile number is required',
+                'mobile_no.string' => 'Invalid mobile number format',
+                'mobile_no.size' => 'Mobile number should be 10 characters',
+                'password.required' => 'Password is required',
+                'password.string' => 'Invalid password format',
+                'password.min' => 'Password should be at least 6 characters',
+                'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, and one numeric digit',
+            ];
+
+
+            $validator = Validator::make($request_all, $validator_rules, $validator_messages);
+            if ($validator->fails()) {
+                $firstErrorMessage = $validator->errors()->first();
+                logger()->error("$this->controller_name:$function_name: Validation failed - $firstErrorMessage", ['request' => $request_all]);
+                return $this->sendError($this->validator_error_code, "$firstErrorMessage");
+            }
+
+            $reset_password = User::where('mobile_no', $request_all['mobile_no'])->first();
+            if ($reset_password) {
+                $reset_password->update([
+                    'password' => Hash::make($request_all['password']),
+                ]);
+            }
+
+            return $this->sendResponse($this->success_status_code, "Password reset successfully", $data = []);
         } catch (\Exception $e) {
             logError($this->controller_name, $function_name, $e);
             return $this->sendError($this->backend_error_code, "$this->error_message");
